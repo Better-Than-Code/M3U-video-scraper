@@ -1,5 +1,3 @@
-Taskmaster Netlify Configuration
-​Optimized for SPA (Single Page Application) behavior
 ​[build]
 publish = "."
 ​[[redirects]]
