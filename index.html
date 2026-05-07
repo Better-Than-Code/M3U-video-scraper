@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Taskmaster | Broadcast v12.2</title>
+    <title>Taskmaster | Diagnostic v12.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -12,10 +13,9 @@
         :root { --accent: #3b82f6; --bg: #010204; }
         body { font-family: 'Urbanist', sans-serif; background-color: var(--bg); color: #f8fafc; height: 100vh; overflow: hidden; margin: 0; }
         .glass { background: rgba(10, 15, 25, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.05); }
-        .neon-glow { box-shadow: 0 0 50px -10px rgba(59, 130, 246, 0.25); }
-        .channel-btn { transition: all 0.2s ease; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; }
+        .channel-btn { transition: all 0.2s ease; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; width: 100%; text-align: left; padding: 1rem; }
         .channel-btn.active { border-color: var(--accent); background: rgba(59, 130, 246, 0.1); }
-        .log-line { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-left: 2px solid #333; margin-bottom: 4px; }
+        .log-line { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-left: 2px solid #333; margin-bottom: 4px; overflow-wrap: break-word; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -24,39 +24,54 @@
     <header class="flex justify-between items-center shrink-0 p-2">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                <i class="fa-solid fa-tower-broadcast text-white"></i>
+                <i class="fa-solid fa-microscope text-white"></i>
             </div>
-            <h1 class="text-xl font-black italic tracking-tighter uppercase">TASKMASTER <span class="text-blue-500 not-italic font-bold text-[10px] ml-2 tracking-widest">v12.2</span></h1>
+            <h1 class="text-xl font-black italic tracking-tighter uppercase leading-none">TASKMASTER <span class="text-blue-500 not-italic font-bold text-[10px] ml-2 tracking-widest">DIAGNOSTIC 12.3</span></h1>
         </div>
     </header>
 
     <main class="flex-1 grid lg:grid-cols-12 gap-4 overflow-hidden">
         <div class="lg:col-span-4 flex flex-col gap-4 overflow-hidden">
             <div class="glass flex-1 rounded-[24px] p-4 overflow-y-auto no-scrollbar" id="nodes-container"></div>
-            <div class="glass h-32 rounded-[24px] p-4 overflow-y-auto no-scrollbar mono text-slate-500" id="log-container"></div>
+            <div class="glass h-48 rounded-[24px] p-4 overflow-y-auto no-scrollbar mono text-slate-500 text-[10px]" id="log-container">
+                <div class="text-blue-400 font-bold mb-2 uppercase">System Debug Console</div>
+            </div>
         </div>
 
         <div class="lg:col-span-8 flex flex-col gap-4 overflow-hidden">
-            <div class="flex-1 bg-black rounded-[32px] overflow-hidden border border-white/5 relative neon-glow">
+            <div class="flex-1 bg-black rounded-[32px] overflow-hidden border border-white/5 relative flex items-center justify-center">
                 <video id="video" class="w-full h-full object-contain" controls playsinline></video>
+                <div id="loader" class="absolute inset-0 flex items-center justify-center bg-black/40 hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin text-blue-500 text-3xl"></i>
+                </div>
             </div>
             <div class="glass p-4 rounded-[24px] flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <div id="sync-dot" class="w-2 h-2 bg-slate-800 rounded-full"></div>
-                    <span id="status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Awaiting Uplink</span>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div id="sync-dot" class="w-2 h-2 bg-slate-800 rounded-full"></div>
+                        <span id="status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Bridge Offline</span>
+                    </div>
+                    <span id="proxy-display" class="text-[8px] font-mono text-slate-600 truncate max-w-[200px]">Checking Proxy...</span>
                 </div>
-                <button onclick="location.reload()" class="text-slate-500 hover:text-white"><i class="fa-solid fa-sync"></i></button>
+                <button onclick="location.reload()" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-500"><i class="fa-solid fa-sync"></i></button>
             </div>
         </div>
     </main>
 
     <script>
-        // ⚠️ PASTE YOUR WORKER URL HERE
+        /**
+         * 🚨 CRITICAL: Check this URL in your browser first!
+         * If it says "No URL", the proxy is working. 
+         * If it shows an error, the proxy is the problem.
+         */
         const PROXY_URL = "https://m3uplayer.earngameapps.workers.dev/";
 
         const video = document.getElementById('video');
         const logs = document.getElementById('log-container');
+        const proxyDisplay = document.getElementById('proxy-display');
         let hls = null;
+
+        proxyDisplay.innerText = `BRIDGE: ${PROXY_URL}`;
 
         const NODES = [
             { name: "WJXT News4JAX", url: "https://d2e1asnsl7br7b.cloudfront.net/7.7.8/out/v1/4984f4f780864380a030062a7d656041/index.m3u8" },
@@ -67,63 +82,77 @@
         function pushLog(msg, color = 'slate-500') {
             const div = document.createElement('div');
             div.className = `log-line text-${color}`;
-            div.innerText = `> ${msg}`;
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
             logs.prepend(div);
+            console.log(msg);
+        }
+
+        async function testProxy() {
+            try {
+                const res = await fetch(PROXY_URL);
+                if (res.ok || res.status === 400) {
+                    pushLog("Proxy Connectivity: OK", "green-400");
+                } else {
+                    pushLog(`Proxy connectivity failed: ${res.status}`, "red-400");
+                }
+            } catch (e) {
+                pushLog(`Proxy unreachable: ${e.message}`, "red-400");
+            }
         }
 
         function mountNode(node, btn) {
             document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('status-text').innerText = "Tunnelling...";
+            document.getElementById('status-text').innerText = "Routing...";
             document.getElementById('sync-dot').className = "w-2 h-2 bg-blue-500 animate-pulse";
+            document.getElementById('loader').classList.remove('hidden');
 
             if (hls) hls.destroy();
-            pushLog(`Connecting to ${node.name}...`, 'blue-400');
+            pushLog(`Targeting: ${node.name}`, 'blue-400');
 
             if (Hls.isSupported()) {
                 hls = new Hls({
                     xhrSetup: (xhr, url) => {
                         let finalUrl = url;
-                        // Handle relative segment mapping
                         if (!url.startsWith('http')) {
                             const baseUrl = node.url.substring(0, node.url.lastIndexOf('/') + 1);
                             finalUrl = new URL(url, baseUrl).href;
                         }
                         xhr.open('GET', `${PROXY_URL}?url=${encodeURIComponent(finalUrl)}`, true);
                     },
-                    // Increase retries for unstable mobile connections
-                    manifestLoadingMaxRetry: 10,
-                    levelLoadingMaxRetry: 10,
-                    fragLoadingMaxRetry: 10
+                    manifestLoadingMaxRetry: 5,
+                    enableWorker: true
                 });
 
                 hls.loadSource(`${PROXY_URL}?url=${encodeURIComponent(node.url)}`);
                 hls.attachMedia(video);
 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().catch(() => { video.muted = true; video.play(); });
-                    document.getElementById('status-text').innerText = "Active Uplink";
+                    document.getElementById('loader').classList.add('hidden');
+                    video.play();
+                    document.getElementById('status-text').innerText = "Live / Secured";
                     document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500";
-                    pushLog("Secure handshake confirmed.", "green-400");
+                    pushLog("Uplink successful.", "green-400");
                 });
 
                 hls.on(Hls.Events.ERROR, (e, data) => {
-                    if (data.fatal) {
-                        pushLog(`Error: ${data.details}. Resetting.`, 'red-400');
-                        hls.recoverMediaError();
-                    }
+                    document.getElementById('loader').classList.add('hidden');
+                    pushLog(`Fault: ${data.details}`, 'red-400');
+                    if (data.fatal) hls.recoverMediaError();
                 });
             }
         }
 
         document.getElementById('nodes-container').innerHTML = NODES.map(node => `
-            <button onclick="mountNode(${JSON.stringify(node).replace(/"/g, '&quot;')}, this)" class="channel-btn w-full p-4 glass flex justify-between items-center group">
-                <span class="text-xs font-bold uppercase tracking-widest">${node.name}</span>
-                <i class="fa-solid fa-chevron-right text-[10px] opacity-20 group-hover:opacity-100"></i>
+            <button onclick="mountNode(${JSON.stringify(node).replace(/"/g, '&quot;')}, this)" class="channel-btn glass group">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase tracking-widest">${node.name}</span>
+                    <i class="fa-solid fa-tower-cell text-[10px] opacity-30"></i>
+                </div>
             </button>
         `).join('');
 
-        pushLog("System Ready.");
+        testProxy();
     </script>
 </body>
 </html>
