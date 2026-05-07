@@ -143,7 +143,7 @@
             if (hls) hls.destroy();
             log(`Linking Node: ${node.name}`, 'blue-400');
 
-            const entryPoint = `${PROXY_URL}?url=${encodeURIComponent(node.url)}`;
+            const entryPoint = `${PROXY_URL}?url=${m3uhosted.earngameapps.workers.dev}`;
 
             if (Hls.isSupported()) {
                 hls = new Hls({
