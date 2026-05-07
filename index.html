@@ -1,0 +1,239 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taskmaster PWA</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F172A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.freepik.com/512/2721/2721264.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Urbanist', sans-serif;
+            background-color: #05070A;
+            color: #F8FAFC;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        .bento-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .video-container {
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        video { width: 100%; height: 100%; }
+
+        .glass-nav {
+            background: rgba(5, 7, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .proxy-active {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, #0f172a 25%, #1e293b 50%, #0f172a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Header -->
+    <header class="p-6 flex justify-between items-center sticky top-0 z-40 bg-[#050710]/90 backdrop-blur-md">
+        <div>
+            <h1 class="text-xl font-black tracking-tighter text-white">TASKMASTER <span class="text-blue-500">PRO</span></h1>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <p class="text-[8px] uppercase tracking-[0.2em] text-slate-400 font-bold">Node: <span id="engine-mode">GITHUB DEPLOY READY</span></p>
+            </div>
+        </div>
+        <button onclick="toggleProxy()" id="proxy-toggle" class="bento-card px-4 py-2 rounded-full flex items-center gap-2 border-slate-700">
+            <i class="fa-solid fa-shield-halved text-blue-500 text-xs"></i>
+            <span class="text-[10px] font-black uppercase">CORS Proxy</span>
+        </button>
+    </header>
+
+    <main id="home-view" class="px-6 space-y-6">
+        <!-- News Grid -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500 text-white/50">Live Feeds</h2>
+                <span class="text-[9px] text-green-500 font-bold tracking-widest">LIVE SYNC</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3" id="news-grid">
+                <!-- Injected channels -->
+            </div>
+        </section>
+
+        <!-- Search -->
+        <section class="bento-card p-1 rounded-2xl border-blue-500/20">
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Search Master Index..." class="w-full bg-transparent p-4 pl-12 text-sm focus:outline-none placeholder:text-slate-600 font-medium">
+                <i class="fa-solid fa-satellite absolute left-5 top-1/2 -translate-y-1/2 text-blue-500 text-xs"></i>
+            </div>
+        </section>
+
+        <!-- PWA Install Tip -->
+        <div id="install-tip" class="hidden bento-card p-4 rounded-3xl border-yellow-500/30">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-download text-yellow-500"></i>
+                <p class="text-[10px] font-bold text-yellow-200">Install to Home Screen for better performance.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Player Modal (Same Logic) -->
+    <div id="player-view" class="fixed inset-0 bg-black z-50 hidden flex flex-col">
+        <div class="p-6 flex justify-between items-center">
+            <button onclick="closePlayer()" class="w-10 h-10 bento-card rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            <div class="text-center">
+                <h3 id="player-title" class="font-bold text-sm">Streaming...</h3>
+                <p id="player-status-sub" class="text-[8px] text-blue-500 font-black uppercase tracking-widest">Master Node Link</p>
+            </div>
+            <button onclick="launchVLC()" class="w-10 h-10 bento-card rounded-full flex items-center justify-center border-orange-500/50">
+                <i class="fa-solid fa-traffic-cone text-orange-500 text-xs"></i>
+            </button>
+        </div>
+        <div class="flex-1 flex items-center justify-center p-4">
+            <div class="video-container w-full max-w-4xl shadow-2xl">
+                <video id="video" playsinline controls></video>
+                <div id="resolver-ui" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
+                    <div class="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="mt-4 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Resolving Satellite...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav fixed bottom-0 left-0 right-0 h-20 flex justify-around items-center px-10 z-40">
+        <div class="flex flex-col items-center gap-1 text-blue-500">
+            <i class="fa-solid fa-compass text-xl"></i>
+            <span class="text-[9px] font-black uppercase">News</span>
+        </div>
+        <div class="flex flex-col items-center gap-1 text-slate-600">
+            <i class="fa-solid fa-layer-group text-xl"></i>
+            <span class="text-[9px] font-black uppercase">Index</span>
+        </div>
+    </nav>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('SW Registered');
+                }).catch(err => console.log('SW Error:', err));
+            });
+        }
+
+        const video = document.getElementById('video');
+        let hlsInstance = null;
+        let currentUrl = '';
+        let isProxyEnabled = false;
+
+        const proxyServers = ['https://api.allorigins.win/raw?url='];
+        const channels = [
+            { name: 'NBC News', url: 'https://link.theplatform.com/s/r_S79C/98a3b0928e4e/manifest.m3u8', icon: 'fa-n' },
+            { name: 'CNBC Live', url: 'https://cnbc-i.akamaihd.net/hls/live/271644/cnbc_en/master.m3u8', icon: 'fa-chart-line' },
+            { name: 'CBS News', url: 'https://cbsn-us.cbsnstream.cbsnews.com/main/master.m3u8', icon: 'fa-eye' },
+            { name: 'ABC News', url: 'https://content.uplynk.com/channel/332e8a6723234907a3891edef679234b.m3u8', icon: 'fa-font' },
+            { name: 'BBC World', url: 'https://vs-hls-push-uk-live.akamaized.net/x=3/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8', icon: 'fa-b' },
+            { name: 'Bloomberg', url: 'https://live-bloomberg-tv.global.ssl.fastly.net/bloomberg/master.m3u8', icon: 'fa-money-bill-trend-up' }
+        ];
+
+        function toggleProxy() {
+            isProxyEnabled = !isProxyEnabled;
+            document.getElementById('proxy-toggle').classList.toggle('proxy-active', isProxyEnabled);
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('news-grid');
+            grid.innerHTML = channels.map(c => `
+                <div onclick="initStream('${c.url}', '${c.name}')" class="bento-card p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-slate-800 transition-all active:scale-95">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+                        <i class="fa-solid ${c.icon}"></i>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-tight text-white/90">${c.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function launchVLC() {
+            if (!currentUrl) return;
+            const vlcProtocol = `vlc://${currentUrl}`;
+            window.location.href = vlcProtocol;
+        }
+
+        function initStream(url, title) {
+            currentUrl = url;
+            document.getElementById('player-view').classList.remove('hidden');
+            document.getElementById('player-title').innerText = title;
+            document.getElementById('resolver-ui').classList.remove('hidden');
+
+            if (hlsInstance) hlsInstance.destroy();
+            const finalUrl = isProxyEnabled ? `${proxyServers[0]}${encodeURIComponent(url)}` : url;
+            
+            if (Hls.isSupported()) {
+                hlsInstance = new Hls();
+                hlsInstance.loadSource(finalUrl);
+                hlsInstance.attachMedia(video);
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    document.getElementById('resolver-ui').classList.add('hidden');
+                    video.play();
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = finalUrl;
+                video.addEventListener('loadedmetadata', () => {
+                    document.getElementById('resolver-ui').classList.add('hidden');
+                    video.play();
+                });
+            }
+        }
+
+        function closePlayer() {
+            video.pause();
+            document.getElementById('player-view').classList.add('hidden');
+        }
+
+        window.onload = renderGrid;
+    </script>
+</body>
+</html>
+
+```
