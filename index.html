@@ -3,242 +3,202 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taskmaster Pro</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0F172A">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.freepik.com/512/2721/2721264.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Taskmaster | Broadcast v12.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap');
-        body { font-family: 'Urbanist', sans-serif; background-color: #05070A; color: #F8FAFC; -webkit-tap-highlight-color: transparent; }
-        .bento-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .video-container { aspect-ratio: 16 / 9; background: #000; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid rgba(59, 130, 246, 0.2); }
-        .active-tab { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
-        video { width: 100%; height: 100%; object-fit: contain; }
-        .shimmer { background: linear-gradient(90deg, #0f172a 25%, #1e293b 50%, #0f172a 75%); background-size: 200% 100%; animation: load 1.5s infinite; }
-        @keyframes load { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800;900&family=JetBrains+Mono&display=swap');
+        
+        :root { --accent: #3b82f6; --bg: #010204; }
+        body { font-family: 'Urbanist', sans-serif; background-color: var(--bg); color: #f8fafc; height: 100vh; overflow: hidden; margin: 0; }
+        
+        .glass { background: rgba(10, 15, 25, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.05); }
+        .neon-glow { box-shadow: 0 0 50px -10px rgba(59, 130, 246, 0.25); }
+        
+        .channel-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 24px; position: relative; overflow: hidden; }
+        .channel-btn.active { border-color: var(--accent); background: rgba(59, 130, 246, 0.12); box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.05); }
+        .channel-btn.active::after { content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 3px; background: var(--accent); border-radius: 0 4px 4px 0; }
+        
+        .log-line { border-left: 2px solid rgba(59, 130, 246, 0.3); padding-left: 10px; font-size: 10px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Smooth scroll for channel list */
+        #channel-list { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        #channel-list::-webkit-scrollbar { width: 4px; }
+        #channel-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
     </style>
 </head>
-<body class="pb-24">
+<body class="p-4 md:p-8 flex flex-col gap-6">
 
-    <!-- Header -->
-    <header class="p-6 sticky top-0 z-40 bg-[#050710]/95 backdrop-blur-md border-b border-white/5">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h1 class="text-2xl font-black tracking-tighter text-white">TASKMASTER <span class="text-blue-500">PRO</span></h1>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    <p class="text-[9px] uppercase tracking-[0.2em] text-slate-400 font-black">Secure Relay: <span id="status-text">Active</span></p>
-                </div>
+    <header class="flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-2xl rotate-3">
+                <i class="fa-solid fa-tower-broadcast text-white text-2xl"></i>
             </div>
-            <button onclick="toggleProxy()" id="global-proxy-btn" class="bento-card px-4 py-2 rounded-full flex items-center gap-2 border-slate-700 transition-all">
-                <i class="fa-solid fa-shield-halved text-blue-500 text-xs"></i>
-                <span id="proxy-status-label" class="text-[10px] font-black uppercase">Auto-Proxy</span>
-            </button>
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter uppercase leading-none">TASKMASTER</h1>
+                <p class="text-[10px] font-bold text-blue-500 tracking-[0.4em] mt-1.5 uppercase opacity-80">Enterprise Mesh v12.0</p>
+            </div>
         </div>
-
-        <!-- Navigation Tabs -->
-        <div class="flex gap-6 border-b border-white/5">
-            <button onclick="switchTab('official')" id="tab-official" class="pb-2 text-xs font-black uppercase tracking-widest active-tab">Verified</button>
-            <button onclick="switchTab('research')" id="tab-research" class="pb-2 text-xs font-black uppercase tracking-widest text-slate-500">Satellite Index</button>
+        <div class="hidden sm:flex gap-2">
+            <div class="px-4 py-2 rounded-xl glass flex items-center gap-3">
+                <div id="heartbeat" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-bold mono tracking-widest text-slate-400 uppercase">System: Online</span>
+            </div>
         </div>
     </header>
 
-    <main class="px-6 py-6 space-y-8">
+    <main class="flex-1 grid lg:grid-cols-12 gap-6 overflow-hidden">
         
-        <!-- Official Section -->
-        <section id="view-official">
-            <h2 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-4">Official News Nodes</h2>
-            <div class="grid grid-cols-2 gap-3" id="official-grid"></div>
-        </section>
+        <!-- Sidebar -->
+        <div class="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
+            <div class="glass flex-1 rounded-[32px] p-6 overflow-y-auto no-scrollbar" id="channel-list">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6 pl-2">Validated Sources</p>
+                <div class="space-y-3" id="nodes-container"></div>
+            </div>
 
-        <!-- Research Section -->
-        <section id="view-research" class="hidden space-y-6">
-            <div class="flex gap-2">
-                <div class="relative flex-1">
-                    <input type="text" id="m3u-input" placeholder="Paste M3U URL..." 
-                        class="w-full bg-slate-900 border border-slate-800 p-4 pl-12 rounded-2xl text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                    <i class="fa-solid fa-satellite-dish absolute left-5 top-1/2 -translate-y-1/2 text-blue-500 text-xs"></i>
+            <div class="glass h-48 rounded-[32px] p-5 flex flex-col">
+                <div class="flex justify-between items-center mb-3 px-1">
+                    <span class="text-[9px] font-bold text-blue-400 uppercase tracking-widest italic">Live Telemetry</span>
                 </div>
-                <button onclick="parsePlaylist()" class="bg-blue-600 p-4 rounded-2xl text-white">
-                    <i class="fa-solid fa-sync"></i>
+                <div id="log-container" class="flex-1 overflow-y-auto mono text-slate-500 space-y-2 pr-2 scrollbar-hide"></div>
+            </div>
+        </div>
+
+        <!-- Stage -->
+        <div class="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
+            <div class="flex-1 bg-black rounded-[40px] overflow-hidden border border-white/5 relative neon-glow">
+                <video id="video" class="w-full h-full object-contain" controls playsinline></video>
+                <div id="unmute-tip" onclick="unmuteVideo()" class="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity z-20">
+                    <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                        <i class="fa-solid fa-volume-high text-white text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-black tracking-widest uppercase">Tap to Activate Audio</span>
+                </div>
+            </div>
+
+            <div class="glass p-6 md:p-8 rounded-[40px] flex justify-between items-center border-t border-blue-500/10">
+                <div class="flex items-center gap-6">
+                    <div id="status-icon" class="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center border border-white/10 transition-all">
+                        <i class="fa-solid fa-satellite-dish text-slate-700 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h2 id="node-name" class="text-xl font-black text-white uppercase italic tracking-tighter leading-none mb-2">Idle Mode</h2>
+                        <div class="flex items-center gap-2">
+                            <span id="sync-dot" class="w-2 h-2 bg-slate-800 rounded-full"></span>
+                            <span id="status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Access Point</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-blue-600/20 text-slate-500 hover:text-white transition-all active:scale-90">
+                    <i class="fa-solid fa-sync text-xl"></i>
                 </button>
             </div>
-            <div id="research-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
-            <div id="research-empty" class="py-12 text-center border-2 border-dashed border-slate-800 rounded-3xl">
-                <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest">No Remote Index Synced</p>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <!-- Unified Player Modal -->
-    <div id="player-view" class="fixed inset-0 bg-black z-50 hidden flex flex-col">
-        <div class="p-6 flex justify-between items-center">
-            <button onclick="closePlayer()" class="w-12 h-12 bento-card rounded-full flex items-center justify-center">
-                <i class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div class="text-center px-4 overflow-hidden">
-                <h3 id="player-title" class="font-black text-sm uppercase truncate">Station</h3>
-                <p id="player-meta" class="text-[8px] text-blue-500 font-black uppercase tracking-[0.3em]">Connecting...</p>
-            </div>
-            <button onclick="launchVLC()" class="w-12 h-12 bento-card rounded-full flex items-center justify-center text-orange-500 border border-orange-500/30">
-                <i class="fa-solid fa-traffic-cone"></i>
-            </button>
-        </div>
-
-        <div class="flex-1 flex items-center justify-center p-4">
-            <div class="video-container w-full max-w-5xl shadow-2xl shadow-blue-500/10">
-                <video id="video" playsinline controls></video>
-                <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center">
-                    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p id="loading-text" class="mt-6 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Resolving Node...</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-10 text-center space-y-6">
-            <div class="flex justify-center gap-4">
-                <div class="px-4 py-2 bento-card rounded-xl">
-                    <p class="text-[8px] text-slate-500 font-black uppercase">Latency</p>
-                    <p class="text-xs font-bold text-green-500" id="latency-val">--</p>
-                </div>
-                <div class="px-4 py-2 bento-card rounded-xl">
-                    <p class="text-[8px] text-slate-500 font-black uppercase">CORS</p>
-                    <p class="text-xs font-bold text-blue-500">Bypassed</p>
-                </div>
-            </div>
-            <button onclick="launchVLC()" class="bg-orange-500 w-full max-w-xs py-4 rounded-full text-xs font-black uppercase tracking-widest shadow-xl shadow-orange-500/20">
-                External VLC Bypass
-            </button>
-        </div>
-    </div>
-
     <script>
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+        /**
+         * PRODUCTION CONFIG
+         * 1. Deploy worker.js to Cloudflare
+         * 2. Replace PROXY_URL with your .workers.dev address
+         */
+        const PROXY_URL = "https://m3uplayer.earngameapps.workers.dev/";
 
         const video = document.getElementById('video');
+        const logs = document.getElementById('log-container');
         let hls = null;
-        let currentUrl = '';
-        let isProxyManual = true;
 
-        const officialChannels = [
-            { name: 'NBC News', url: 'https://link.theplatform.com/s/r_S79C/98a3b0928e4e/manifest.m3u8', icon: 'fa-n' },
-            { name: 'CNBC Live', url: 'https://cnbc-i.akamaihd.net/hls/live/271644/cnbc_en/master.m3u8', icon: 'fa-chart-line' },
-            { name: 'CBS News', url: 'https://cbsn-us.cbsnstream.cbsnews.com/main/master.m3u8', icon: 'fa-eye' },
-            { name: 'ABC News', url: 'https://content.uplynk.com/channel/332e8a6723234907a3891edef679234b.m3u8', icon: 'fa-font' },
-            { name: 'BBC World', url: 'https://vs-hls-push-uk-live.akamaized.net/x=3/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8', icon: 'fa-b' },
-            { name: 'Bloomberg', url: 'https://live-bloomberg-tv.global.ssl.fastly.net/bloomberg/master.m3u8', icon: 'fa-money-bill-trend-up' }
+        const NODES = [
+            { name: "WJXT News4JAX", url: "https://d2e1asnsl7br7b.cloudfront.net/7.7.8/out/v1/4984f4f780864380a030062a7d656041/index.m3u8" },
+            { name: "Action News Jax", url: "https://cmg-jax-wfox.akamaized.net/hls/live/2017351/wfox/master.m3u8" },
+            { name: "First Coast News", url: "https://vcloud-670-349.live.webcaster.pro/stream/playlist.m3u8" },
+            { name: "Diagnostics (Mux)", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
         ];
 
-        function switchTab(tab) {
-            document.getElementById('view-official').classList.toggle('hidden', tab !== 'official');
-            document.getElementById('view-research').classList.toggle('hidden', tab !== 'research');
-            document.getElementById('tab-official').classList.toggle('active-tab', tab === 'official');
-            document.getElementById('tab-research').classList.toggle('active-tab', tab === 'research');
+        function log(msg, color = 'slate-500') {
+            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const div = document.createElement('div');
+            div.className = `log-line text-${color}`;
+            div.innerHTML = `<span><span class="opacity-30 mr-2">${time}</span> ${msg}</span>`;
+            logs.prepend(div);
         }
 
-        function toggleProxy() {
-            isProxyManual = !isProxyManual;
-            const btn = document.getElementById('global-proxy-btn');
-            btn.classList.toggle('border-blue-500', isProxyManual);
-            document.getElementById('proxy-status-label').innerText = isProxyManual ? "Proxy On" : "Proxy Off";
+        function unmuteVideo() {
+            video.muted = false;
+            document.getElementById('unmute-tip').classList.add('opacity-0', 'pointer-events-none');
         }
 
-        function renderOfficial() {
-            document.getElementById('official-grid').innerHTML = officialChannels.map(c => `
-                <div onclick="initStream('${c.url}', '${c.name}', false)" class="bento-card p-5 rounded-3xl cursor-pointer hover:border-blue-500/50 transition-all active:scale-95">
-                    <div class="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-3"><i class="fa-solid ${c.icon}"></i></div>
-                    <p class="text-[11px] font-black uppercase tracking-tight">${c.name}</p>
-                    <p class="text-[8px] text-green-500 font-bold mt-1 uppercase">Verified Link</p>
-                </div>
-            `).join('');
-        }
-
-        async function parsePlaylist() {
-            const url = document.getElementById('m3u-input').value.trim();
-            if(!url) return;
-            const grid = document.getElementById('research-grid');
-            grid.innerHTML = '<div class="col-span-2 py-10 shimmer rounded-3xl"></div>';
-            document.getElementById('research-empty').classList.add('hidden');
-
-            try {
-                const proxy = 'https://api.allorigins.win/raw?url=';
-                const response = await fetch(proxy + encodeURIComponent(url));
-                const text = await response.text();
-                const lines = text.split('\n');
-                const channels = [];
-                for (let i = 0; i < lines.length; i++) {
-                    if (lines[i].startsWith('#EXTINF:')) {
-                        channels.push({
-                            name: lines[i].split(',').pop().trim(),
-                            url: lines[i+1]?.trim()
-                        });
-                    }
-                }
-                grid.innerHTML = channels.slice(0, 50).map(c => `
-                    <div onclick="initStream('${c.url}', '${c.name}', true)" class="bento-card p-4 rounded-2xl cursor-pointer active:scale-95">
-                        <p class="text-[10px] font-black uppercase truncate">${c.name}</p>
-                        <p class="text-[7px] text-slate-500 font-bold uppercase mt-1">Research Node</p>
-                    </div>
-                `).join('');
-            } catch (e) {
-                grid.innerHTML = '<p class="text-red-500 text-[10px] font-bold col-span-2">SYNC FAILED</p>';
-            }
-        }
-
-        function initStream(url, title, forceProxy = false) {
-            currentUrl = url;
-            document.getElementById('player-view').classList.remove('hidden');
-            document.getElementById('player-title').innerText = title;
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            document.getElementById('loading-text').innerText = (forceProxy || isProxyManual) ? "Proxy Routing..." : "Direct Uplink...";
+        async function mountNode(node, btn) {
+            document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.getElementById('node-name').innerText = node.name;
+            document.getElementById('status-text').innerText = "Establishing Stealth Tunnel...";
+            document.getElementById('sync-dot').className = "w-2 h-2 bg-blue-500 animate-pulse";
+            document.getElementById('status-icon').className = "w-16 h-16 bg-blue-600/20 text-blue-400 rounded-3xl flex items-center justify-center border border-blue-500/20 animate-pulse";
 
             if (hls) hls.destroy();
+            log(`Linking Node: ${node.name}`, 'blue-400');
 
-            const finalUrl = (isProxyManual || forceProxy) ? `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` : url;
+            const entryPoint = `${PROXY_URL}?url=${encodeURIComponent(node.url)}`;
 
             if (Hls.isSupported()) {
-                hls = new Hls({ xhrSetup: xhr => xhr.withCredentials = false });
-                hls.loadSource(finalUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                    video.play();
+                hls = new Hls({
+                    xhrSetup: (xhr, url) => {
+                        // RECURSIVE RESOLVER: Ensures segments inherit the parent node's base URL
+                        let finalUrl = url;
+                        if (!url.startsWith('http')) {
+                            const base = node.url.substring(0, node.url.lastIndexOf('/') + 1);
+                            finalUrl = new URL(url, base).href;
+                        }
+                        xhr.open('GET', `${PROXY_URL}?url=${encodeURIComponent(finalUrl)}`, true);
+                    },
+                    manifestLoadingMaxRetry: 5,
+                    manifestLoadingRetryDelay: 1000,
+                    levelLoadingMaxRetry: 5
                 });
-                hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal && !forceProxy && !isProxyManual) {
-                        console.log("Auto-switching to Proxy...");
-                        initStream(url, title, true);
-                    } else if (d.fatal) {
-                        document.getElementById('loading-text').innerText = "Security Block - Use VLC";
+
+                hls.loadSource(entryPoint);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    log(`Handshake Verified. Tunnel Secure.`, 'green-400');
+                    video.muted = true;
+                    video.play().catch(() => {
+                        document.getElementById('unmute-tip').classList.remove('opacity-0', 'pointer-events-none');
+                    });
+                    document.getElementById('status-text').innerText = "Mesh Active / Encrypted";
+                    document.getElementById('sync-dot').className = "w-2 h-2 bg-green-500";
+                    document.getElementById('status-icon').className = "w-16 h-16 bg-green-600/10 text-green-500 rounded-3xl flex items-center justify-center border border-green-500/20 shadow-lg";
+                });
+
+                hls.on(Hls.Events.ERROR, (e, data) => {
+                    if (data.fatal) {
+                        log(`Channel Fault: ${data.details}`, 'red-400');
+                        hls.recoverMediaError();
                     }
                 });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = finalUrl;
-                video.play();
             }
         }
 
-        function launchVLC() {
-            window.location.href = `vlc://${currentUrl}`;
-        }
+        // Initialize UI
+        document.getElementById('nodes-container').innerHTML = NODES.map(node => `
+            <button onclick="mountNode(${JSON.stringify(node).replace(/"/g, '&quot;')}, this)" 
+                    class="channel-btn w-full text-left p-5 glass border border-white/5 group hover:border-blue-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-blue-600/10 transition-colors">
+                        <i class="fa-solid fa-link text-slate-700 group-hover:text-blue-500 text-xs"></i>
+                    </div>
+                    <span class="text-sm font-bold uppercase tracking-tight group-hover:text-blue-300">${node.name}</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-[10px] text-slate-800 group-hover:text-blue-500 group-hover:translate-x-1 transition-all"></i>
+            </button>
+        `).join('');
 
-        function closePlayer() { video.pause(); document.getElementById('player-view').classList.add('hidden'); }
-        
-        setInterval(() => {
-            document.getElementById('latency-val').innerText = Math.floor(Math.random() * 20 + 15) + "ms";
-        }, 2000);
-
-        window.onload = renderOfficial;
+        log("Taskmaster Enterprise v12.0 Ready.", "blue-400");
     </script>
 </body>
 </html>
